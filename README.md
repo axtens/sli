@@ -9,4 +9,6 @@ It has been re-implemented in .NET Framework and .NET Core
 
 Example scripts also provided.
 
-Probably an example of how not to build a DSL.
+Probably an example of how **not** to build a DSL.
+
+When a .sli script is run, a .trc (trace) file is also generated. 

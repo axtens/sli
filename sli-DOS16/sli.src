@@ -1,0 +1,748 @@
+begin def
+
+   strsegsize 64k
+   stack 2k
+
+#include ffblk.h
+#include args.h
+#include addext.h
+#include swapper.h
+#include datetime.h
+#include yesno.h
+#include getdeept.h
+
+    dim varlist$[ 1000 ]
+
+   sub debug( onething$, twothing$ )
+   sub setyesno( flag% )
+
+   common caseSens%
+   common errorflag%
+   common debugging%
+   common varcount%
+   common progMax%
+   common translation%
+
+    sub defvar( varname$, varval$ )
+    sub getvar( varname$ ) ' result in common varvalue$
+    common varvalue$
+   sub getvaroffset( vname$ )
+   common varoffset%
+
+    sub Substitute( theline$ )
+    common Subst$
+
+    sub chop( cItem$ )
+    common chop_first$
+    common chop_second$
+
+    sub process( kwd$, rest$ )
+
+   sub parse( line$ )
+
+    common comspec$
+
+   sub varnamevalue( offset% )
+   common Variable$
+   common Value$
+
+   common progLine%, progIncr%
+
+   sub findlabel( lname$ )
+   common labelOffset%
+
+   common CRLF$
+
+   common Yes%, No%
+
+   common fileHandle%
+
+   common failure%
+
+   common tempone$, temptwo$
+
+   common messages%
+
+begin code
+   messages% = true
+
+   tempone$ = chr( 254 )
+   temptwo$ = chr( 255 )
+
+   Yes% = false
+   No% = false
+   translation% = 1
+   caseSens% = true
+
+   CRLF$ = chr( 13 ) + chr( 10 )
+   debugging% = false
+   comspec$ = getenv( "COMSPEC" )
+
+    varcount% = 0
+   CALL DEFVAR( "$COMSPEC", comspec$ )
+   call defvar( "$ERROR", "" )
+   call defvar( "$EXEC", "" )
+   call defvar( "$INPUT", "" )
+   call defvar( "$OPEN", "" )
+   call defvar( "$DONE", "FALSE" )
+   call defvar( "$DATE", date )
+   call defvar( "$NULL", "{}" )
+
+    call getargs
+    call defvar( "%0", arg_v$[ 0 ] )
+    if arg_c% < 2 then
+        print "no script file.\n"
+        end
+    endif
+
+    inputfile$ = arg_v$[ 1 ]
+    call addext( inputfile$, ".SLI" )
+    inputfile$ = _addext$
+    call defvar( "%1", inputfile$ )
+
+    if arg_c% > 2 then
+        j% = arg_c% - 1
+        for i% = 2 to j%
+            c$ = str( i% )
+            c$ = ltrim( c$ )
+            c$ = "%" + c$
+            call defvar( c$, arg_v$[ i% ] )
+        next i%
+    endif
+
+
+    if fexist( inputfile$, 7 ) = false then
+        print inputfile$ + " not found.\n\n"
+        end
+    endif
+
+    progMax%=0
+    h% = fopen( inputfile$, readonly )
+    forever% = true
+    while forever%
+        finput( h%, inrec$ )
+        if feof( h% ) = true then
+            exit while
+        endif
+        inrec$ = ltrim( inrec$ )
+        if len( inrec$ ) > 0 then
+            call chop( inrec$ )
+            chop_first$ = ucase( chop_first$ )
+            if chop_first$ = "DEFINE" then
+               call chop( chop_second$ )
+               call defvar( chop_first$, chop_second$ )
+            else
+               progMax% = progMax% + 1
+               line$ = str( progMax% )
+               line$ = ltrim( line$ )
+               line$ = "$LINE" + line$
+               call defvar( line$, inrec$ )
+            endif
+        endif
+    wend
+    fclose( h% )
+    if progMax%=0 then
+        print "No instructions in file " + inputfile$ + "\n"
+        end
+    endif
+
+   forever% = true
+   progLine% = 1
+   while forever%
+      call defvar( "$TIME", time )
+      line$ = str( progLine% )
+      line$ = ltrim( line$ )
+      line$ = "$LINE" + line$
+      call getvar( line$ )
+      inrec$ = varvalue$
+      errorflag% = false
+'      failure% = false
+      progIncr% = 1
+      call parse( inrec$ )
+      if errorflag% = true then
+         if messages% = true then
+            call getvar( "$ERROR" )
+            print "Error in line " + progLine% + "--> " + inrec$ + ":\n\t" + varvalue$ + "\n"'
+            call defvar( "$ERROR", "" )
+         endif
+         errorflag% = false
+      endif
+      call getvar( "$DONE" )
+      if varvalue$ = "TRUE" then
+         exit while
+      endif
+      progLine% = progLine% + progIncr%
+      if progLine% > progMax% then
+         exit while
+      endif
+   wend
+   end
+
+sub parse( line$ )
+   call chop( line$ )
+   c1$ = chop_first$
+   c2$ = chop_second$
+   call process( c1$, c2$ )
+end sub
+
+sub Substitute( theline$ ) ' returning Subst$
+   call debug( "Substitue: theline$=" , theline$ )
+   SubstTemp$ = theline$
+    call swapper( SubstTemp$, "{{}", tempone$ )
+    SubstTemp$ = swapped$
+    call swapper( SubstTemp$, "{}}", temptwo$ )
+    SubstTemp$ = swapped$
+   forever% = true
+   while forever%
+      call getdeepesttoken( SubstTemp$, "{", "}" )
+      call debug( "deepestToken$=", deepestToken$ )
+      if deepestToken$ = "" then
+         call swapper( SubstTemp$, "{}", "" )
+         call debug("swapped$=", swapped$ )
+         SubstTemp$ = swapped$
+         exit while
+      endif
+      call getvar( deepestToken$ )
+      call debug("varvalue$=", varvalue$ )
+      deepestToken$ = "{" + deepestToken$ + "}"
+      call swapper( SubstTemp$, deepestToken$, varvalue$ )
+      call debug("swapped$=", swapped$ )
+      SubstTemp$ = swapped$
+   wend
+    call swapper( SubstTemp$, tempone$, "{" )
+    SubstTemp$ = swapped$
+    call swapper( SubstTemp$, temptwo$, "{" )
+    SubstTemp$ = swapped$
+   subst$ = substtemp$
+'
+'    for sc% = 1 to varcount%
+'        call varnamevalue( sc% )
+'        d1$ = "{" + variable$ + "}"
+'        d2$ = value$
+'        call swapper( SubstTemp$, d1$, d2$ )
+'        SubstTemp$ = swapped$
+'    next
+'    ' swap out {{} with { and {}} with }
+'    call swapper( SubstTemp$, "{{}" "{" )
+'    SubstTemp$ = swapped$
+'    call swapper( SubstTemp$, "{}}", "}" )
+'    SubstTemp$ = swapped$
+'    Subst$ = SubstTemp$
+end sub
+
+#include args.sub
+#include addext.sub
+#include swapper.sub
+
+sub chop( cItem$ )
+    s% = cinstr( cItem$, 32 )
+    if s% > 0 then
+        s% = s% - 1
+        chop_first$ = left( cItem$, s% )
+        s% = s% + 2
+        chop_second$ = mid( cItem$, s% )
+    else
+        chop_first$ = cItem$
+        chop_second$ = ""
+    endif
+end sub
+
+'      IF KWD$="DELAY" THEN
+'          VARNAME$=PARM$
+'          GOSUB GETVAR
+'          IDELAY%=VAL(VARVAL$)
+'          IF IDELAY%=0 THEN IDELAY%=60
+'          DELAY IDELAY%
+'          GOTO DONE
+'      ENDIF
+'      IF KWD$="KEYPRESSED" THEN
+'          LASTKEY$=INKEY$
+'          IF LASTKEY$<>"" THEN
+'              IYES%=-1
+'              INO%=0
+'          ELSE
+'              IYES%=0
+'              INO%=-1
+'          ENDIF
+'          GOTO DONE
+'      ENDIF
+'      IF KWD$="LASTKEY" THEN
+'          LASTKEY$=INKEY$
+'          IF LASTKEY$<>"" THEN
+'              IF PARM$<>"" THEN
+'                  IF ASC(LASTKEY$)=VAL(PARM$) THEN
+'                      IYES%=-1
+'                      INO%=0
+'                  ELSE
+'                      IYES%=0
+'                      INO%=-1
+'                  ENDIF
+'              ENDIF
+'          ENDIF
+'          GOTO DONE
+'      ENDIF
+'      IF KWD$="COPYFILE" THEN
+'          ITEM$=PARM$
+'          GOSUB PARSING
+'          VARNAME$=KWD$
+'          GOSUB GETVAR
+'          KWD$=VARVAL$
+'          VARNAME$=PARM$
+'          GOSUB GETVAR
+'          PARM$=VARVAL$
+'          IF KWD$<>"" AND PARM$<>"" THEN
+'              IRES%=COPY(KWD$,PARM$)
+'              IF IRES%=0 THEN
+'                  IYES%=1
+'                  INO%=0
+'              ELSE
+'                  IYES%=0
+'                  INO%=1
+'              ENDIF
+'              IFAIL%=0
+'          ELSE
+'              IFAIL%=1
+'          ENDIF
+'          GOTO DONE
+'      ENDIF
+sub defvar( varname$, varval$ )
+   vitem$ = varname$ + space( 20 )
+   vitem$ = left( vitem$, 20 )
+   vitem$ = vitem$ + varval$
+   call getvaroffset( varname$ )
+   if varoffset% = 0 then
+      varcount% = varcount% + 1
+      varlist$[ varcount% ] = vitem$
+   else
+      varlist$[ varoffset% ] = vitem$
+   endif
+end sub
+
+sub getvar( varname$ ) ' result in common varvalue$
+   call getvaroffset( varname$ )
+   if varoffset% > 0 then
+      vline$ = varlist$[ varoffset% ]
+      varvalue$ = mid( vline$, 21 )
+   else
+      cErr$ = "Variable " + varname$ + " not defined."
+      call defvar( "$ERROR", cErr$ )
+      errorflag% = true
+      varvalue$ = ""
+   endif
+end sub
+
+sub VarNamevalue( offset% )
+   cTemp$ = varlist$[ offset% ]
+   Value$ = mid( cTemp$, 21 )
+   cTemp$ = left( cTemp$, 20 )
+   cTemp$ = rtrim( cTemp$ )
+   Variable$ = cTemp$
+end sub
+
+sub getvaroffset( vname$ )
+   gv_name$ = vname$ + space( 20 )
+   gv_name$ = left( gv_name$, 20 )
+   varoffset% = 0
+   for i% = 1 to varcount%
+      gv_value$ = varlist$[ i% ]
+      gv_test$ = left( gv_value$, 20 )
+      if gv_test$ = gv_name$ then
+         varoffset% = i%
+         exit for
+      endif
+   next
+end sub
+
+sub findlabel( lname$ )
+   found% = false
+   for labelLine% = 1 to progMax%
+      line$ = str( labelLine% )
+      line$ = ltrim( line$ )
+      line$ = "$LINE" + line$
+      call getvar( line$ )
+      inrec$ = varvalue$
+      call chop( inrec$ )
+      chop_first$ = ucase( chop_first$ )
+      if chop_first$ = "LABEL" then
+         if chop_second$ = lname$ then
+            if progLine% > labelLine% then
+               labelOffset% = progLine% - labelLine% * -1
+            else
+               labelOffset% = labelLine% - progLine%
+            endif
+            found% = true
+            exit for
+         endif
+      endif
+   next
+   if found% = false then
+      cErrMsg$ = "Cannot find label " + lname$
+      call defvar( "$ERROR", cErrMsg$ )
+      labelOffset% = 1
+      errorflag% = true
+      failure% = true
+   else
+      errorflag% = false
+      failure% = false
+   endif
+end sub
+
+#include yesno.sub
+
+sub setyesno( flag% )
+   if flag% = true then
+      Yes% = true
+      No% = false
+   else
+      Yes% = false
+      No% = true
+   endif
+end sub
+
+#include getdeept.sub
+
+sub debug( onething$, twothing$ )
+   if debugging% = true then print onething$ + twothing$ + "\n"
+end sub
+
+sub process( kwd$, rest$ )
+   call debug( "process: ",kwd$ )
+   kwd$ = ucase( kwd$ )
+   select case kwd$
+
+      case "DEBUG"
+         call Substitute( rest$ )
+         rest$ = Subst$
+         rest$ = ucase( rest$ )
+         if rest$ = "ON" then
+            debugging% = true
+         else
+            if rest$ = "OFF" then
+               debugging% = false
+            else
+               call defvar( "$ERROR", "DEBUG neither ON nor OFF" )
+               errorflag% = true
+            endif
+         endif
+
+      case "MESSAGES"
+         call Substitute( rest$ )
+         rest$ = Subst$
+         rest$ = ucase( rest$ )
+         if rest$ = "ON" then
+            messages% = true
+         else
+            if rest$ = "OFF" then
+               messages% = false
+            else
+               call defvar( "$ERROR", "MESSAGES neither ON nor OFF" )
+               errorflag% = true
+            endif
+         endif
+
+      case "CONSIDERING"
+         call Substitute( rest$ )
+         rest$ = Subst$
+         rest$ = ucase( rest$ )
+         if rest$ = "CASE" then
+            caseSens% = true
+         endif
+
+      case "IGNORING"
+         call Substitute( rest$ )
+         rest$ = Subst$
+         rest$ = ucase( rest$ )
+         if rest$ = "CASE" then
+            caseSens% = false
+         endif
+
+      case "TRANSLATION"
+         call Substitute( rest$ )
+         rest$ = Subst$
+         rest$ = ucase( rest$ )
+         translation% = val( rest$ )
+
+      case "MESSAGE"
+         call Substitute( rest$ )
+         rest$ = Subst$
+         call swapper( rest$, "\\n", CRLF$ )
+         print  swapped$
+         failure% = false
+
+      case "DUMP" ' output file in rest$
+         call Substitute( rest$ )
+         rest$ = Subst$
+         h% = fcreate( rest$, archive )
+         for i% = 1 to varcount%
+            call varnamevalue( i% )
+            fprint( h%, variable$ + "=" + value$ + "\n" )
+         next
+         fclose( h% )
+         failure% = false
+
+      case "SET" ' set var value
+         call Substitute( rest$ )
+         rest$ = Subst$
+         call chop( rest$ )
+         call getvaroffset( chop_first$ )
+         if varoffset% > 0 then
+            call defvar( chop_first$, chop_second$ )
+         else
+            cErr$ = "Cannot SET undefined variable " + chop_first$ + "."
+            call defvar( "$ERROR", cErr$ )
+            errorflag% = true
+            failure% = false
+         endif
+
+      case "END"
+         call Substitute( rest$ )
+         rest$ = "MESSAGE " + Subst$
+         call parse( rest$ )
+         failure% = true
+         call defvar( "$DONE", "TRUE" )
+
+      case "BEEP"
+         call Substitute( rest$ )
+         rest$ = Subst$
+         nTimes% = val( rest$ )
+         if nTimes% = 0 then nTimes% = 1
+         for i% = 1 to nTimes%
+            print "\g"
+         next
+         failure% = false
+
+      case "DO"
+         call Substitute( rest$ )
+         rest$ = Subst$
+         call chop( rest$ )
+         nRes% = exec( chop_first$, chop_second$ )
+         cRes$ = str( nRes% )
+         call defvar( "$EXEC", cRes$ )
+         failure% = false
+
+      case "INPUT"
+         ' input prompt
+         call substitute( rest$ )
+         subst$ = "MESSAGE " + subst$ + " "
+         call parse( subst$ )
+         'print subst$ + " "
+         input( temp$ )
+         print "\n"
+         call defvar( "$INPUT", temp$ )
+         failure% = false
+
+      case "GOTO"
+         call substitute( rest$ )
+         call findlabel( subst$ )
+         progIncr% = labelOffset%
+
+      case "LABEL" 'ignore
+
+      case "IFYES"
+         if Yes% = true then
+            Yes% = false
+            call substitute( rest$ )
+            call parse( subst$ )
+         endif
+
+      case "IFNO"
+         if No% = true then
+            No% = false
+            call substitute( rest$ )
+            call parse( subst$ )
+         endif
+
+      case "EXISTS"
+         call substitute( rest$ )
+         exist% = fexist( subst$, 7 )
+         call setyesno( exist% )
+
+      case "YESNO"
+         call substitute( rest$ )
+         rest$ = "MESSAGE " + rest$
+         call parse( rest$ )
+         call yesno
+         call setyesno( yesno_% )
+
+      case "OPEN"
+         call substitute( rest$ )
+         temp$ = "EXISTS " + rest$
+         call parse( temp$ )
+         if Yes% = true then
+            fileHandle% = fopen( subst$, readwrite )
+            call defvar( "$OPEN", subst$ )
+         else
+            failure% = true
+         endif
+
+      case "CREATE"
+         call substitute( rest$ )
+         fileHandle% = fcreate( subst$, archive )
+         call defvar( "$OPEN", subst$ )
+
+      case "WRITE"
+         call substitute( rest$ )
+         call getvar( "$OPEN" )
+         if varvalue$ = "" then
+            cErrMsg$ = "Cannot write to an unopen file."
+            call defvar( "$ERROR", cErrMsg$ )
+            errorflag% = true
+            failure% = true
+         else
+            call swapper( subst$, "\\n", CRLF$ )
+            fprint( fileHandle%, swapped$ )
+         endif
+
+      case "READ"
+         call getvar( "$OPEN" )
+         if varvalue$ = "" then
+            cErrMsg$ = "Cannot read from an unopened file."
+            call defvar( "$ERROR", cErrMsg$ )
+            errorflag% = true
+            failure% = true
+         else
+            finput( fileHandle%, temp$ )
+            if feof( fileHandle% ) = true then
+               call defvar( "$ERROR", "End of file." )
+               errorflag% = true
+               failure% = true
+            else
+               call defvar( "$INPUT", temp$ )
+            endif
+         endif
+
+      case "CLOSE"
+         call getvar( "$OPEN" )
+         if varvalue$ = "" then
+            cErrMsg$ = "Cannot close a file that is not open."
+            call defvar( "$ERROR", cErrMsg$ )
+            errorflag% = true
+            failure% = true
+         else
+            fclose( fileHandle% )
+            call defvar( "$OPEN", "" )
+         endif
+
+      case "IFFAIL"
+         if failure% = true then
+            failure% = false
+            call substitute( rest$ )
+            call parse( subst$ )
+         endif
+
+      case "TEST"
+         call chop( rest$ )
+         compar$ = ucase( chop_first$ )
+         call chop( chop_second$ )
+         call substitute( chop_first$ )
+         lh$ = "[" + subst$ + "]"
+         _lh% = val( subst$ )
+         call substitute( chop_second$ )
+         rh$ = "[" + subst$ + "]"
+         _rh% = val( subst$ )
+         if caseSens% = false then
+            lh$ = ucase( lh$ )
+            rh$ = ucase( rh$ )
+         endif
+         call debug( "test: lh$=", lh$ )
+         call debug( "test: rh$=", rh$ )
+         testRes% = false
+         select case compar$
+            case "EQS"
+               if lh$ = rh$ then
+                  testRes% = true
+               endif
+            case "LTS"
+               if lh$ < rh$ then
+                  testRes% = true
+               endif
+            case "LES"
+               if lh$ <= rh$ then
+                  testRes% = true
+               endif
+            case "GES"
+               if lh$ >= rh$ then
+                  testRes% = true
+               endif
+            case "GTS"
+               if lh$ > rh$ then
+                  testRes% = true
+               endif
+            case "NES"
+               if lh$ <> rh$ then
+                  testRes% = true
+               endif
+            case "EQ"
+               if _lh% = _rh% then
+                  testRes% = true
+               endif
+            case "LT"
+               if _lh% < _rh% then
+                  testRes% = true
+               endif
+            case "LE"
+               if _lh% <= _rh% then
+                  testRes% = true
+               endif
+            case "GE"
+               if _lh% >= _rh% then
+                  testRes% = true
+               endif
+            case "GT"
+               if _lh% > _rh% then
+                  testRes% = true
+               endif
+            case "NE"
+               if _lh% <> _rh% then
+                  testRes% = true
+               endif
+         end select
+         call setyesno( testRes% )
+
+      case "INC"
+         call substitute( rest$ )
+         call chop( subst$ )
+         call getvar( chop_first$ )
+         amount% = val( chop_second$ )
+         current% = val( varvalue$ )
+         current% = current% + amount%
+         temp$ = str( current% )
+         call defvar( chop_first$, temp$ )
+
+      case "KEYPRESSED"
+         flag% = false
+         if inkey() <> -1 then
+            flag% = true
+         endif
+         call setyesno( flag% )
+
+      case "EVAL"
+         call substitute( rest$ )
+         call parse( subst$ )
+         failure% = false
+
+      case "CONTENTS"
+         call getvar( rest$ )
+         print varvalue$
+         failure% = false
+
+      case "VDEFINED"
+         call substitute( rest$ )
+         call getvaroffset( subst$ )
+         if varoffset% = 0 then
+            call setyesno( false )
+         else
+            call setyesno( true )
+         endif
+         failure% = false
+
+      case else
+         failure% = true
+         temp$ = kwd$ + " unknown"
+         call defvar( "$ERROR", temp$ )
+
+   end select
+endprocess:
+end sub
+
+----------------------------------------------------

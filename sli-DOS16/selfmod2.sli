@@ -1,0 +1,8 @@
+    trace on
+	define $LINE_8
+    define $LINE_4 message this is line 2\n
+    define $LINE_5 message will this work?\n
+	define $LINE_8 end this is a modified end\n
+    message this should get overwritten with the previous line\n
+	dump selfmod2.out
+	end

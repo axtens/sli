@@ -1,0 +1,83 @@
+	debug on
+	
+remark to ack :i :j
+remark   if :i = 0 [output :j+1]
+remark   if :j = 0 [output ack :i-1 1]
+remark   output ack :i-1 ack :i :j-1
+remark end
+
+	define depth
+	define acker_1
+	define acker_2
+	define return_value
+
+'	define c
+'	set c 1
+'label loop
+'	define leaf1_{c}
+'	define leaf2_{c}
+'	inc c
+'	test GE {c} 10
+'	ifyes goto done
+'	ifno goto loop
+'label done
+	define leaf1_0
+	define leaf2_0
+	goto main
+	
+label acker
+	set depth 0
+	set acker_1 {p1}
+	set acker_2 {p2}
+	test EQ {acker_1} 0
+	ifyes goto leaf1
+	ifno goto leaf2
+label after_leaf1
+	set acker_1 {{return_value}}
+	inc depth -1
+	test EQ {acker_2} 0
+	ifyes goto leaf2
+	ifno goto leaf3
+label after_leaf2
+	set acker_2 {{return_value}}
+	inc depth -1
+	goto leaf3
+label after_leaf3
+	inc depth -1
+	goto main_here
+	
+label leaf1
+	inc depth
+	set leaf1_{depth} {acker_1}
+	inc leaf1_{depth}
+	set return_value leaf1_{depth}
+	goto after_leaf1
+	
+label leaf2
+	inc depth
+	set leaf2_{depth} {acker_1}
+	inc leaf2_{depth}
+	set return_value leaf2_{depth}
+	goto after_leaf2
+
+
+label leaf3
+	goto main_here
+
+label main
+	define p1
+	vdefined %2
+	ifyes set p1 {%2}
+	ifno set p1 0
+	
+	define p2
+	vdefined %3
+	ifyes set p2 {3}
+	ifno set p2 0
+	
+	define return
+	set return "main_here"
+	goto acker
+label main_here
+	message {return_value}
+	

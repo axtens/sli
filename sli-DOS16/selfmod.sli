@@ -1,0 +1,3 @@
+    set $LINE2 message this is line 2
+    message this should get overwritten with the previous line
+	end

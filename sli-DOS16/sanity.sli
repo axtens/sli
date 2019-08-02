@@ -1,0 +1,61 @@
+	trace on
+	macro dec inc $1 -1
+	remark macro say message $1 $2 $3 $4 $5 $6 $7 $8 $9
+	define counter 0
+label loop
+	remark message {counter}
+	remark test lt {counter} 9
+	remark ifyes message ,
+	define a_{counter} {counter}
+	message Defined a_{counter} as {a_{counter}}\n
+	inc counter 
+	test eq {counter} 10
+	ifno goto loop
+	
+	set counter 9
+label loop2
+	message i set a_{counter} to {a_{counter}}\n
+	dec counter
+	test gt {counter} 0
+	ifyes goto loop2
+	
+	message \n
+	message {%1}\n
+	exists {%1}
+	ifyes goto fox
+	message Guess what!? I don't exist!
+	end
+label fox
+	message Ahh, wonderful, I exist.\n
+	goto c
+label b
+	define notepad c:\\windows\\system32\\notepad.exe
+	define file {%1}
+	remark do {notepad} {file}
+	macro notepad do {notepad} $1
+	notepad {file}
+	goto a
+label c
+	message What's your name?
+	input
+	message Hello {$INPUT}, How are you?\nDid you know that the time is {$TIME}\n
+	message and that the date is {$DATE}?\n
+	goto b
+label a
+	define k
+	message Are you sure you want to quit (Y/N)?
+label getkey
+	keypressed
+	message {$KEYPRESS}\n
+	ifno goto getkey
+	set k {$KEYPRESS}
+	test eqs {k} Y
+	ifyes goto done
+	test eqs {k} y
+	ifyes goto done
+	message Like it or not, you're quitting anyway\n
+label done
+	dump sanity.out
+	end bye bye
+
+----------------------------------------------------

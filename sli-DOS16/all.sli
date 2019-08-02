@@ -1,0 +1,159 @@
+    define times 1
+    vdefined %2
+    ifyes set times {%2}
+
+    define bottles 99
+    define pronoun one
+label drink
+    message {bottles} bottles of beer on the wall\n
+    message {bottles} bottles of beer\n
+    message take {pronoun} down and pass it round\n
+    inc bottles -1
+    test eq {bottles} 1
+    ifyes goto lastone
+    message {bottles} bottles of beer on the wall\n
+    message \n
+    goto drink
+
+label lastone
+    message {bottles} bottle of beer on the wall\n\n
+    set pronoun it
+    message {bottles} bottle of beer on the wall\n
+    message {bottles} bottle of beer\n
+    message take {pronoun} down and pass it round\n
+    message no more bottles of beer on the wall\n\n
+    message no more bottles of beer on the wall\n
+    message no more bottles of beer\n
+    message go to the store and buy some more\n
+    set bottles 99
+    set pronoun one
+    message {bottles} bottles of beer on the wall\n
+    message \n
+
+    inc times -1
+    test eq {times} 0
+    ifno goto drink
+----------------------------------------------------   define n 0
+label loop
+   vdefined %{n}
+   ifno end
+   message %{n}={%{n}}\n
+   inc n 1
+   goto loop
+----------------------------------------------------   MESSAGES OFF
+   DEFINE C 0
+   DEFINE D
+   DEFINE E
+   LABEL B
+
+   SET D %{C}
+   SET E {{D}}
+   TEST EQ {E}
+   IFYES GOTO END
+
+   MESSAGE %{C}={E}\n
+   INC C 1
+   KEYPRESSED
+   IFYES YESNO QUIT (y/n)?
+   IFYES GOTO END
+   GOTO B
+LABEL END
+LABEL PLUGH
+   DUMP IFS.OUT
+
+
+
+----------------------------------------------------    define dest start
+    vdefined %2
+    ifyes set dest {%2}
+    messages off
+    goto {dest}
+label bar
+    test eqs {$ERROR}
+    ifno message "label {dest} not found"
+    end
+label start
+      message start
+      end
+label done
+      message don
+      end
+----------------------------------------------------message Mung until no good\n
+define sli c:\sli\sli.exe
+define mung mung
+do c:\command.com /c {sli} mung
+message No good\n
+----------------------------------------------------debug off
+message {%1}\n
+exists {%1}
+ifyes goto fox
+message Guess what! This script doesn't exist
+end
+label fox
+message Ok it exists\n
+goto c
+label b
+define a c:\command.com
+define b /c dir
+do {a} {b}
+goto a
+label c
+input What's your name?
+message Hello {$INPUT}, How are you?\nDid you know that the time is {$TIME}\n
+message and that the date is {$DATE}?\n
+dump sanity.out
+goto b
+label a
+yesno Are you sure you want to quit (Y/N)?
+ifyes end bye bye
+end Well, you're going anyway
+
+----------------------------------------------------    set $LINE2 message this is line 2
+    message this should get overwritten with the previous line
+	----------------------------------------------------    define $LINE5
+    set $LINE4 message this is line 2
+    set $LINE5 message will this work?
+    message this should get overwritten with the previous line
+	----------------------------------------------------
+   define t
+   vdefined %2
+   ifyes set t {%2}
+   ifno set t x
+   message {t}
+----------------------------------------------------   YESNO TURN ON DEBUGGING (y/n)?
+   IFYES DEBUG ON
+
+   DEFINE COPYFILE DO c:\command.com /c copy {{}a{}} {{}b{}}
+   message {COPYFILE}\n
+
+   DEFINE B HELLO
+   DEFINE C WORLD
+   SET B "HELLO WORLD"
+   SET C 1
+   BEEP {C}
+   EXISTS C:\CONFIG.SYS
+   IFYES GOTO COPYIT
+   GOTO NOTTHERE
+
+LABEL COPYIT
+   define a c:\config.sys
+   define b c:\config.cpy
+   EVAL {COPYFILE}
+   IFFAIL GOTO NOWORKY
+   GOTO WORKED
+
+LABEL NOWORKY
+   MESSAGE IT DIDN'T WORK
+   GOTO END
+
+LABEL NOTTHERE
+   MESSAGE NOT THERE
+   GOTO END
+
+LABEL WORKED
+MESSAGE IT WORKED
+GOTO END
+
+LABEL END
+END
+----------------------------------------------------
