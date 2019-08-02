@@ -12,3 +12,5 @@ Example scripts also provided.
 Probably an example of how **not** to build a DSL.
 
 When a .sli script is run, a .trc (trace) file is also generated. 
+
+If a script fails, fix the interpreter.
