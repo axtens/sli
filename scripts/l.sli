@@ -1,0 +1,18 @@
+	trace on
+	define dest start
+    defined %2
+    ifyes set dest {%2}
+    goto {dest}
+label bar
+    test gts {$ERROR} {$SPACE}
+    ifyes message {$ERROR}
+    goto continuing
+label start
+      message start
+      end
+label done
+      message don
+      end
+label continuing
+	message continuing
+	end

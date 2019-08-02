@@ -1,0 +1,9 @@
+	trace on
+	define n 0
+label loop
+   defined %{n}
+   ifno end
+   message %{n}={%{n}}\n
+   inc n
+   goto loop
+----------------------------------------------------

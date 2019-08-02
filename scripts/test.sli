@@ -1,0 +1,38 @@
+   MESSAGE TURN ON DEBUGGING (y/n)?
+   KEYPRESSED
+   IFYES trace ON
+
+   macro COPYFILE DO {$COMSPEC} /c copy $1 $2
+   
+   DEFINE B HELLO
+   DEFINE C WORLD
+   SET B HELLO WORLD
+   SET C 1
+   REMARK BEEP {C}
+   EXISTS C:\CONFIG.SYS
+   IFYES GOTO COPYIT
+   GOTO NOTTHERE
+
+LABEL COPYIT
+   define a c:\config.sys
+   define b c:\config.cpy
+   copyfile {a} {b}
+   MESSAGE {$DO}
+   IFFAIL GOTO NOWORKY
+   GOTO WORKED
+
+LABEL NOWORKY
+   MESSAGE IT DIDN'T WORK
+   GOTO END
+
+LABEL NOTTHERE
+   MESSAGE NOT THERE
+   GOTO END
+
+LABEL WORKED
+MESSAGE IT WORKED
+GOTO END
+
+LABEL END
+END
+----------------------------------------------------

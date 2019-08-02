@@ -1,0 +1,6 @@
+message Mung until no good\n
+macro sli do sli.exe
+define mung "mung"
+sli {mung}
+message No good\n
+----------------------------------------------------

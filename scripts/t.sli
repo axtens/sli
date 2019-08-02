@@ -1,0 +1,7 @@
+	trace on
+	define t
+   defined %2
+   ifyes set t {%2}
+   ifno set t x
+   message {t}
+   end

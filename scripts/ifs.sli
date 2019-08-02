@@ -1,0 +1,24 @@
+   MESSAGES OFF
+   DEFINE C 0
+   DEFINE D
+   DEFINE E
+   LABEL B
+
+   SET D %{C}
+   SET E {{D}}
+   TEST EQ {E}
+   IFYES GOTO END
+
+   MESSAGE %{C}={E}\n
+   INC C 1
+   KEYPRESSED
+   IFYES YESNO QUIT (y/n)?
+   IFYES GOTO END
+   GOTO B
+LABEL END
+LABEL PLUGH
+   DUMP IFS.OUT
+
+
+
+----------------------------------------------------

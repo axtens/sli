@@ -1,0 +1,37 @@
+	MACRO dec inc $1 -1
+	define times 1
+    defined %2
+    ifyes set times {%2}
+
+    define bottles 99
+    define pronoun one
+label drink
+    message {bottles} bottles of beer on the wall\n
+    message {bottles} bottles of beer\n
+    message take {pronoun} down and pass it round\n
+    inc bottles -1
+    test eq {bottles} 1
+    ifyes goto lastone
+    message {bottles} bottles of beer on the wall\n
+    message \n
+    goto drink
+
+label lastone
+    message {bottles} bottle of beer on the wall\n\n
+    set pronoun it
+    message {bottles} bottle of beer on the wall\n
+    message {bottles} bottle of beer\n
+    message take {pronoun} down and pass it round\n
+    message no more bottles of beer on the wall\n\n
+    message no more bottles of beer on the wall\n
+    message no more bottles of beer\n
+    message go to the store and buy some more\n
+    set bottles 99
+    set pronoun one
+    message {bottles} bottles of beer on the wall\n
+    message \n
+
+    inc times -1
+    test eq {times} 0
+    ifno goto drink
+	end Burrrrp!
